@@ -66,8 +66,8 @@ instance RegisterRoutes routes '[] handlers '[] m
 
 instance
   ( RegisterRoutes routes routesTail handlers handlersTail m
-  , HasField name route routes
-  , HasField name handler handlers
+  , HasField' name routes route
+  , HasField' name handlers handler
   , RegisterHandler route handler m
   ) => RegisterRoutes
          routes
