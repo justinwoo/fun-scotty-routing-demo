@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Main where
 
@@ -46,69 +47,67 @@ type PostRoute = Route PostRequest
 
 -- go through the records pairwise and register each handler
 class RegisterRoutes
-    routes
     (routesL :: [(Symbol, *)])
-    handlers
     (handlersL :: [(Symbol, *)])
+    routes
+    handlers
     m
   where
     registerRoutesImpl :: forall
        . Monad m
       => routes
-      -> Proxy routesL
       -> handlers
-      -> Proxy handlersL
       -> m ()
 
-instance RegisterRoutes routes '[] handlers '[] m
+instance RegisterRoutes '[] '[] routes handlers m
   where
-    registerRoutesImpl _ _ _ _ = pure ()
+    registerRoutesImpl _ _ = pure ()
 
 instance
-  ( RegisterRoutes routes routesTail handlers handlersTail m
+  ( RegisterRoutes routesTail handlersTail routes handlers m
   , HasField' name routes route
   , HasField' name handlers handler
   , RegisterHandler route handler m
   ) => RegisterRoutes
-         routes
          ('(name, route) ': routesTail)
-         handlers
          ('(name, handler) ': handlersTail)
+         routes
+         handlers
          m
   where
-    registerRoutesImpl routes _ handlers _ = do
+    registerRoutesImpl routes handlers = do
         registerHandlerImpl route handler
         registerRoutesImpl
+          @routesTail
+          @handlersTail
           routes
-          (Proxy :: Proxy routesTail)
           handlers
-          (Proxy :: Proxy handlersTail)
         pure ()
       where
         route = getField @name routes
         handler = getField @name handlers
 
-registerRoutes :: forall routes routesL handlers handlersL m
+registerRoutes :: forall routesL handlersL routes handlers m
    . Monad m
   => Generic routes
   => Generic handlers
   => routesL ~ GRowToList (Rep routes)
   => handlersL ~ GRowToList (Rep handlers)
   => RegisterRoutes
-       routes
        routesL
-       handlers
        handlersL
+       routes
+       handlers
        m
   => routes
   -> handlers
   -> m ()
 registerRoutes routes handlers =
   registerRoutesImpl
+    @routesL
+    @handlersL
     routes
-    (Proxy :: Proxy routesL)
     handlers
-    (Proxy :: Proxy handlersL)
 
 -- register each handler, to the route method and concrete monad used
 class RegisterHandler route handler m
@@ -128,7 +127,7 @@ instance
           res <- liftAndCatchIO handler
           text . pack $ show res
       where
-        path = symbolVal (Proxy :: Proxy url)
+        path = symbolVal @url Proxy
 
 data MyRoutes = MyRoutes
   { home :: GetRoute Bool "/"
