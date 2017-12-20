@@ -2,7 +2,7 @@ flags: {}
 extra-package-dbs: []
 packages:
 - .
-resolver: nightly-2017-11-25
+resolver: lts-10.0
 extra-deps:
 - git: git@github.com:kcsongor/generic-lens.git
   commit: 7c05cfc8c18632094a1e37014dd25c675fa8ea67
